@@ -12,7 +12,7 @@ jobs:
   sonar:
     runs-on: ubuntu-latest
 
-    env:                     # <-- env must be under the job
+    env:
       SONAR_HOST_URL: "http://54.82.109.99:9000"
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
@@ -43,10 +43,8 @@ jobs:
       - name: Run SonarQube Scan (fresh project per run)
         uses: SonarSource/sonarqube-scan-action@v2
         with:
-          # Use a unique project key per run so Sonar shows only current-run findings
-          extra-args: >
-            -Dsonar.projectKey=${{ github.repository }}-${{ github.run_id }}
-            -Dsonar.sources=.
+          args: >
+            -Dsonar.projectKey=${{ github.repository }}-${{ github.run_id }} -Dsonar.sources=.
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ env.SONAR_HOST_URL }}
@@ -101,7 +99,7 @@ for iss in data.get('issues', []):
         filtered.append(iss)
 
 json.dump({'issues': filtered}, open('sonar_issues_filtered.json', 'w'))
-print(f'Filtered {len(filtered)} issues (from {len(data.get("issues", []))})')
+print(f'Filtered {len(filtered)} issues (from {len(data.get('issues', []))})')
 PY
 
           jq -r '
@@ -160,7 +158,7 @@ PY
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-      - name: Post Full Report in PR    # Only post in PRs, not on direct pushes to main
+      - name: Post Full Report in PR
         if: github.event_name == 'pull_request'
         uses: peter-evans/create-or-update-comment@v3
         with:
