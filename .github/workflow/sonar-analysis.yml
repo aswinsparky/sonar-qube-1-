@@ -1,0 +1,140 @@
+name: SonarQube PR Analysis
+
+on:
+  push:
+    branches:
+      main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  sonar:
+    runs-on: ubuntu-latest
+
+    env:
+      SONAR_HOST_URL: "http://54.82.109.99:9000"
+
+    permissions:
+      pull-requests: write
+      contents: read
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18.x'
+
+      - name: Run SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v2
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ env.SONAR_HOST_URL }}
+
+      - name: Check .scannerwork
+        run: ls -R .scannerwork
+
+      - name: Wait for CE Task & Fetch Issues
+        run: |
+          sudo apt-get update && sudo apt-get install -y jq curl
+
+          TASK_FILE=".scannerwork/report-task.txt"
+          if [ ! -f "$TASK_FILE" ]; then
+            echo "❌ report-task.txt NOT FOUND"
+            exit 1
+          fi
+
+          CE_TASK_ID=$(grep 'ceTaskId' $TASK_FILE | cut -d '=' -f2)
+          COMPONENT_KEY=$(grep -E 'componentKey|projectKey' $TASK_FILE | cut -d '=' -f2)
+          STATUS="PENDING"
+          ATTEMPTS=0
+          MAX_ATTEMPTS=30
+
+          while [[ "$STATUS" != "SUCCESS" && $ATTEMPTS -lt $MAX_ATTEMPTS ]]; do
+            sleep 5
+            CE_STATUS=$(curl -s -u "${{ secrets.SONAR_TOKEN }}:" \
+              "${{ env.SONAR_HOST_URL }}/api/ce/task?id=$CE_TASK_ID")
+            STATUS=$(echo "$CE_STATUS" | jq -r '.task.status')
+            echo "Status: $STATUS (attempt $ATTEMPTS)"
+            ATTEMPTS=$((ATTEMPTS+1))
+          done
+
+          if [ "$STATUS" != "SUCCESS" ]; then
+            echo "❌ CE task did NOT finish"
+            exit 1
+          fi
+
+          curl -s -u "${{ secrets.SONAR_TOKEN }}:" \
+            "${{ env.SONAR_HOST_URL }}/api/issues/search?componentKeys=$COMPONENT_KEY&ps=500" \
+            > sonar_issues.json
+
+          jq -r '
+            .issues[] |
+            "Severity: \(.severity)\nRule: \(.rule)\nFile: \(.component)\nLine: \(.line)\nMessage: \(.message)\n---"
+          ' sonar_issues.json > issue_summary.txt
+
+      - name: Fetch SonarQube Metrics
+        run: |
+          TASK_FILE=".scannerwork/report-task.txt"
+          COMPONENT_KEY=$(grep -E 'componentKey|projectKey' $TASK_FILE | cut -d '=' -f2)
+          curl -s -u "${{ secrets.SONAR_TOKEN }}:" \
+            "${{ env.SONAR_HOST_URL }}/api/measures/component?component=$COMPONENT_KEY&metricKeys=bugs,vulnerabilities,code_smells,coverage,duplicated_lines_density,complexity,security_hotspots,reliability_rating,security_rating,sqale_rating" \
+            > sonar_metrics.json
+
+          jq -r '.component.measures[] | "\(.metric): \(.value)"' sonar_metrics.json > sonar_metrics_summary.txt
+
+      - name: Load issue summary content
+        id: load_issues
+        run: |
+          echo "content<<EOF" >> $GITHUB_OUTPUT
+          cat issue_summary.txt >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Load metrics summary content
+        id: load_metrics
+        run: |
+          echo "content<<EOF" >> $GITHUB_OUTPUT
+          cat sonar_metrics_summary.txt >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Upload to S3
+        run: |
+          pip install --user awscli
+          export PATH=$PATH:/home/runner/.local/bin
+          aws s3 cp issue_summary.txt s3://${{ secrets.AWS_S3_BUCKET }}/issue_summary.txt --region us-east-1
+          aws s3 cp sonar_metrics_summary.txt s3://${{ secrets.AWS_S3_BUCKET }}/sonar_metrics_summary.txt --region us-east-1
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Post Full Report in PR
+        uses: peter-evans/create-or-update-comment@v3
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            ## 🧪 SonarQube Analysis Report (FULL DETAILS)
+            ### 🔍 Issues Summary  
+            ```
+            ${{ steps.load_issues.outputs.content }}
+            ```
+            ### 📊 Metrics Summary  
+            ```
+            ${{ steps.load_metrics.outputs.content }}
+            ```
+            ### ☁️ S3 Upload Status  
+            ✔ Uploaded: issue_summary.txt  
+            ✔ Uploaded: sonar_metrics_summary.txt

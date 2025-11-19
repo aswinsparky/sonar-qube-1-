@@ -1,0 +1,46 @@
+# Terraform
+.terraform/
+terraform.tfstate
+terraform.tfstate.*
+crash.log
+*.tfvars
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# SonarQube
+.scannerwork/
+.sonar/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+.venv/
+env/
+venv/
+
+# SSH Keys
+*.pem
+*.pub
+*.key
+
+# Zips
+*.zip
+
+# OS/Editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Logs
+*.log
+
+# S3 Uploads (if needed)
+issue_summary.txt
+sonar_metrics_summary.txt
