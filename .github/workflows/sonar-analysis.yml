@@ -56,7 +56,7 @@ jobs:
 
       - name: Wait for CE Task & Fetch Issues
         run: |
-          sudo apt-get update && sudo apt-get install -y jq curl
+          sudo apt-get update && sudo apt-get install -y jq curl python3
           TASK_FILE=".scannerwork/report-task.txt"
           if [ ! -f "$TASK_FILE" ]; then
             echo "❌ report-task.txt NOT FOUND"
@@ -79,38 +79,31 @@ jobs:
             echo "❌ CE task did NOT finish"
             exit 1
           fi
+          # fetch issues (up to 500)
           curl -s -u "${{ secrets.SONAR_TOKEN }}:" \
             "${{ env.SONAR_HOST_URL }}/api/issues/search?componentKeys=$COMPONENT_KEY&ps=500" \
             > sonar_issues.json
-          # keep a raw copy for debugging
           cp sonar_issues.json sonar_issues_raw.json
+
           # Filter issues: keep only those whose component path (after the first ':') exists in the workspace
           python3 - << 'PY'
-import json,os
-data=json.load(open('sonar_issues.json'))
-filtered=[]
-for iss in data.get('issues',[]):
-    comp=iss.get('component') or ''
-    # component usually looks like 'projectKey:relative/path'
-    path = comp.split(':',1)[1] if ':' in comp else comp
-    # Some components may be project-level or not map to a file; include them if path is empty
+import json, os
+data = json.load(open('sonar_issues.json'))
+filtered = []
+for iss in data.get('issues', []):
+    comp = iss.get('component') or ''
+    path = comp.split(':', 1)[1] if ':' in comp else comp
     if not path:
+        # keep project-level issues
         filtered.append(iss)
         continue
-    # If the path exists in the checked-out repo, keep the issue
-    if os.path.exists(path):
+    if os.path.exists(path) or os.path.exists(path.lstrip('./')):
         filtered.append(iss)
-    else:
-        # also accept terraform files that may be referenced with leading paths
-        # normalize by stripping leading './'
-        norm = path.lstrip('./')
-        if os.path.exists(norm):
-            filtered.append(iss)
 
-json.dump({"issues": filtered}, open('sonar_issues_filtered.json','w'))
-print(f'Filtered {len(filtered)} issues (from {len(data.get("issues",[]))})')
+json.dump({'issues': filtered}, open('sonar_issues_filtered.json', 'w'))
+print(f'Filtered {len(filtered)} issues (from {len(data.get("issues", []))})')
 PY
-          # create a full summary from the filtered issues and write to issue_summary.txt
+
           jq -r '
             .issues[] |
             "Severity: \(.severity)\nRule: \(.rule)\nFile: \(.component)\nLine: \(.line)\nMessage: \(.message)\n---"
