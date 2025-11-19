@@ -40,13 +40,13 @@ jobs:
         with:
           node-version: '18.x'
 
-      - name: Run SonarQube Scan
+      - name: Run SonarQube Scan (fresh project per run)
         uses: SonarSource/sonarqube-scan-action@v2
         with:
+          # Use a unique project key per run so Sonar shows only current-run findings
           extra-args: >
-            -Dsonar.sources=src
-            -Dsonar.inclusions=src/**/*.py
-            -Dsonar.exclusions=terraform/**
+            -Dsonar.projectKey=${{ github.repository }}-${{ github.run_id }}
+            -Dsonar.sources=.
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ env.SONAR_HOST_URL }}
@@ -117,9 +117,10 @@ jobs:
         run: |
           pip install --user awscli
           export PATH=$PATH:/home/runner/.local/bin
-          # Upload the full issue summary and metrics to S3
+          # Upload the full issue summary, raw JSON, and metrics to S3
           aws s3 cp full_issue_summary.txt s3://${{ secrets.AWS_S3_BUCKET }}/issue_summary.txt --region us-east-1
           aws s3 cp full_issue_summary.txt s3://${{ secrets.AWS_S3_BUCKET }}/full_issue_summary.txt --region us-east-1 || true
+          aws s3 cp sonar_issues.json s3://${{ secrets.AWS_S3_BUCKET }}/sonar_issues.json --region us-east-1 || true
           aws s3 cp sonar_metrics_summary.txt s3://${{ secrets.AWS_S3_BUCKET }}/sonar_metrics_summary.txt --region us-east-1
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
