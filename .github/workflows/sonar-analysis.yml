@@ -82,12 +82,39 @@ jobs:
           curl -s -u "${{ secrets.SONAR_TOKEN }}:" \
             "${{ env.SONAR_HOST_URL }}/api/issues/search?componentKeys=$COMPONENT_KEY&ps=500" \
             > sonar_issues.json
-          # create a full summary (project-wide) and also write it to issue_summary.txt
+          # keep a raw copy for debugging
+          cp sonar_issues.json sonar_issues_raw.json
+          # Filter issues: keep only those whose component path (after the first ':') exists in the workspace
+          python3 - << 'PY'
+import json,os
+data=json.load(open('sonar_issues.json'))
+filtered=[]
+for iss in data.get('issues',[]):
+    comp=iss.get('component') or ''
+    # component usually looks like 'projectKey:relative/path'
+    path = comp.split(':',1)[1] if ':' in comp else comp
+    # Some components may be project-level or not map to a file; include them if path is empty
+    if not path:
+        filtered.append(iss)
+        continue
+    # If the path exists in the checked-out repo, keep the issue
+    if os.path.exists(path):
+        filtered.append(iss)
+    else:
+        # also accept terraform files that may be referenced with leading paths
+        # normalize by stripping leading './'
+        norm = path.lstrip('./')
+        if os.path.exists(norm):
+            filtered.append(iss)
+
+json.dump({"issues": filtered}, open('sonar_issues_filtered.json','w'))
+print(f'Filtered {len(filtered)} issues (from {len(data.get("issues",[]))})')
+PY
+          # create a full summary from the filtered issues and write to issue_summary.txt
           jq -r '
             .issues[] |
             "Severity: \(.severity)\nRule: \(.rule)\nFile: \(.component)\nLine: \(.line)\nMessage: \(.message)\n---"
-          ' sonar_issues.json > full_issue_summary.txt
-          # keep backwards-compatible filename: copy full to issue_summary.txt
+          ' sonar_issues_filtered.json > full_issue_summary.txt
           cp full_issue_summary.txt issue_summary.txt
 
       - name: Fetch SonarQube Metrics
