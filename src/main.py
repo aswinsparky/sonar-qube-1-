@@ -1,6 +1,8 @@
-def add(a, b):
-    return a + b
+import os
+
+def test(a, b):
+    print(a + b)
 
 x = 10
 y = None
-print(x + y)  # type error
+test(x, y)  # TypeError
