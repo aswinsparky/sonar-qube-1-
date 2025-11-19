@@ -83,24 +83,24 @@ jobs:
             > sonar_issues.json
           cp sonar_issues.json sonar_issues_raw.json
 
-          # Filter issues: keep only those whose component path (after the first ':') exists in the workspace
-          python3 - << 'PY'
+          # Filter issues: only include those whose component path exists in the workspace
+          python3 - <<EOF
 import json, os
-data = json.load(open('sonar_issues.json'))
+with open('sonar_issues.json') as f:
+    data = json.load(f)
 filtered = []
 for iss in data.get('issues', []):
     comp = iss.get('component') or ''
     path = comp.split(':', 1)[1] if ':' in comp else comp
     if not path:
-        # keep project-level issues
         filtered.append(iss)
         continue
     if os.path.exists(path) or os.path.exists(path.lstrip('./')):
         filtered.append(iss)
-
-json.dump({'issues': filtered}, open('sonar_issues_filtered.json', 'w'))
-print(f'Filtered {len(filtered)} issues (from {len(data.get('issues', []))})')
-PY
+with open('sonar_issues_filtered.json', 'w') as f:
+    json.dump({'issues': filtered}, f)
+print(f"Filtered {len(filtered)} issues (from {len(data.get('issues', []))})")
+EOF
 
           jq -r '
             .issues[] |
