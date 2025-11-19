@@ -82,8 +82,15 @@ jobs:
           curl -s -u "${{ secrets.SONAR_TOKEN }}:" \
             "${{ env.SONAR_HOST_URL }}/api/issues/search?componentKeys=$COMPONENT_KEY&ps=500" \
             > sonar_issues.json
+          # create a full summary for debugging
           jq -r '
             .issues[] |
+            "Severity: \(.severity)\nRule: \(.rule)\nFile: \(.component)\nLine: \(.line)\nMessage: \(.message)\n---"
+          ' sonar_issues.json > full_issue_summary.txt
+          # create a Python-only summary (filter by component path ending with .py)
+          jq -r '
+            .issues[] |
+            select(.component | test("\\.py$")) |
             "Severity: \(.severity)\nRule: \(.rule)\nFile: \(.component)\nLine: \(.line)\nMessage: \(.message)\n---"
           ' sonar_issues.json > issue_summary.txt
 
