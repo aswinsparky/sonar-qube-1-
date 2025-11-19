@@ -1,9 +1,9 @@
-name: SonarQube PR Analysis
+name: SonarQube Analysis
 
 on:
   push:
     branches:
-      main
+      - main
   pull_request:
     branches:
       - main
@@ -51,19 +51,16 @@ jobs:
       - name: Wait for CE Task & Fetch Issues
         run: |
           sudo apt-get update && sudo apt-get install -y jq curl
-
           TASK_FILE=".scannerwork/report-task.txt"
           if [ ! -f "$TASK_FILE" ]; then
             echo "❌ report-task.txt NOT FOUND"
             exit 1
           fi
-
           CE_TASK_ID=$(grep 'ceTaskId' $TASK_FILE | cut -d '=' -f2)
           COMPONENT_KEY=$(grep -E 'componentKey|projectKey' $TASK_FILE | cut -d '=' -f2)
           STATUS="PENDING"
           ATTEMPTS=0
           MAX_ATTEMPTS=30
-
           while [[ "$STATUS" != "SUCCESS" && $ATTEMPTS -lt $MAX_ATTEMPTS ]]; do
             sleep 5
             CE_STATUS=$(curl -s -u "${{ secrets.SONAR_TOKEN }}:" \
@@ -72,16 +69,13 @@ jobs:
             echo "Status: $STATUS (attempt $ATTEMPTS)"
             ATTEMPTS=$((ATTEMPTS+1))
           done
-
           if [ "$STATUS" != "SUCCESS" ]; then
             echo "❌ CE task did NOT finish"
             exit 1
           fi
-
           curl -s -u "${{ secrets.SONAR_TOKEN }}:" \
             "${{ env.SONAR_HOST_URL }}/api/issues/search?componentKeys=$COMPONENT_KEY&ps=500" \
             > sonar_issues.json
-
           jq -r '
             .issues[] |
             "Severity: \(.severity)\nRule: \(.rule)\nFile: \(.component)\nLine: \(.line)\nMessage: \(.message)\n---"
@@ -94,7 +88,6 @@ jobs:
           curl -s -u "${{ secrets.SONAR_TOKEN }}:" \
             "${{ env.SONAR_HOST_URL }}/api/measures/component?component=$COMPONENT_KEY&metricKeys=bugs,vulnerabilities,code_smells,coverage,duplicated_lines_density,complexity,security_hotspots,reliability_rating,security_rating,sqale_rating" \
             > sonar_metrics.json
-
           jq -r '.component.measures[] | "\(.metric): \(.value)"' sonar_metrics.json > sonar_metrics_summary.txt
 
       - name: Load issue summary content
@@ -121,7 +114,8 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-      - name: Post Full Report in PR
+      - name: Post Full Report in PR    # Only post in PRs, not on direct pushes to main
+        if: github.event_name == 'pull_request'
         uses: peter-evans/create-or-update-comment@v3
         with:
           issue-number: ${{ github.event.pull_request.number }}
