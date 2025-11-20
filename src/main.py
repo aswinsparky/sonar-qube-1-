@@ -1,58 +1,30 @@
-# Hardcoded credentials (sensitive)
-password = "pa$$w0rd"
-api_key = "123456"
-
 def main():
-    # Unused variable
-    temp = 123
+    # Good variable naming and all variables are used
+    numbers = [1, 2, 3, 4, 5]
+    result = sum(numbers)
+    print(f"Sum is: {result}")
 
-    # Null dereference and bug
-    value = None
-    if value > 0:  # This will raise TypeError
-        print("positive")
-
-    # Duplicate code block
-    sum1 = 0
-    for i in range(10):
-        sum1 += i
-
-    sum2 = 0
-    for i in range(10):
-        sum2 += i
-
-    # Unreachable code
-    return
-    print("This line is unreachable")
-
-    # Using eval (security issue)
-    user_input = "3*3"
-    result = eval(user_input)  # Critical: never use eval with user input
-    print("Eval result:", result)
-
-    # Empty except block (bad practice)
+    # Safe logic: no dangerous eval, proper try/except
     try:
-        5 / 0
-    except:
-        pass
+        computation = 10 / 2
+        print(f"Computation: {computation}")
+    except ZeroDivisionError as e:
+        print(f"Error: {e}")
 
-    # Function redefinition
-def foo():
-    return 5
+    user_input = "hello"
+    if user_input == "hello":
+        print("User input matches!")
 
-def foo():
-    # Duplicate definition
-    return "bad"
+    # Demonstrate clean code with no unreachable code or duplicate definitions
+    if len(numbers) > 0:
+        print("The list is not empty.")
 
-    # Bad variable naming, long line, and logic error
-    BADCaseVar = 5
-    this_is_a_very_long_variable_name_example_that_is_far_too_long_for_pep8_and_should_be_broken_up = "long"
-
-    # Compare with is for string
-    x = "fail"
-    y = "fail"
-    if x is y:
-        print("Using is instead of == for string comparison")
+    x = "string1"
+    y = "string2"
+    if x == y:
+        print("Strings are equal.")
+    else:
+        print("Strings are not equal.")
 
 if __name__ == "__main__":
     main()
-    foo()
