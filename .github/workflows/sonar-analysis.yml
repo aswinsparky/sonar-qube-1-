@@ -40,7 +40,6 @@ jobs:
         with:
           node-version: '18.x'
 
-      # --- THIS IS THE KEY CHANGE ---
       - name: Run SonarQube Scan (single project, only src/)
         uses: SonarSource/sonarqube-scan-action@v2
         with:
@@ -83,6 +82,7 @@ jobs:
             > sonar_issues.json
           cp sonar_issues.json sonar_issues_raw.json
 
+          # Filter: keep only issues for files that exist in the current workspace
           python3 - <<EOF
           import json, os
           with open('sonar_issues.json') as f:
@@ -91,14 +91,13 @@ jobs:
           for iss in data.get('issues', []):
               comp = iss.get('component') or ''
               path = comp.split(':', 1)[1] if ':' in comp else comp
-              # Only keep issues where the path starts with src/
-              if path.startswith("src/"):
+              # Issue must be for a file that exists right now
+              if path and os.path.exists(path):
                   filtered.append(iss)
           with open('sonar_issues_filtered.json', 'w') as f:
               json.dump({'issues': filtered}, f)
           print(f"Filtered {len(filtered)} issues (from {len(data.get('issues', []))})")
           EOF
-
           jq -r '
             .issues[] |
             "Severity: \(.severity)\nRule: \(.rule)\nFile: \(.component)\nLine: \(.line)\nMessage: \(.message)\n---"
