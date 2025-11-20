@@ -17,7 +17,7 @@ Output::
                         "UserName": "testuser",
                         "UserType": "IAMUser",
                         "PrincipalId": "AIDACKCEVSQ6C2EXAMPLE",
-                        "AccessKeyId": "ASIASZ4SI7REEEXAMPLE"
+                        "AccessKeyId": "<REDACTED>"
                     }
                 },
                 "Description": "APIs commonly used to discover the users, groups, policies and permissions in an account, was invoked by IAM principal testuser under unusual circumstances. Such activity is not typically seen from this principal.",
