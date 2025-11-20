@@ -1,35 +1,60 @@
-import os
-import hashlib
+# Example Python code with typical code issues for SonarQube
 
-def hardcoded_password():
-    # Hardcoded password (Sensitive data exposure)
-    password = "P@ssword123"
-    print("The password is:", password)
+import sys
 
-def command_injection():
-    # Command injection vulnerability
-    filename = input("Enter file to list: ")
-    os.system(f"ls {filename}")
+def find_sum(numbers):
+    # Unused variable
+    total = 0
 
-def unsafe_eval():
-    # Unsafe eval() (Code injection risk)
-    expr = input("Enter a calculation: ")
-    print("Result:", eval(expr))
+    # Magic number (should be a constant)
+    threshold = 10
 
-def weak_hash(password):
-    # Use of weak hash algorithm (MD5)
-    return hashlib.md5(password.encode()).hexdigest()
+    # Unreachable code
+    return sum(numbers)
+    print("This code is unreachable")
 
-def insecure_sql():
-    # Insecure SQL query (simulated, not real database code)
-    name = input("Username: ")
-    pwd = input("Password: ")
-    query = "SELECT * FROM users WHERE username='" + name + "' AND password='" + pwd + "'"
-    print("Executing:", query)
+def bad_naming():
+    # Variable name not following PEP8 (should be snake_case)
+    BadVariableName = 42
+    return BadVariableName
+
+def duplicate_code():
+    # Duplicate logic
+    result1 = 0
+    for n in range(5):
+        result1 += n
+
+    result2 = 0
+    for n in range(5):
+        result2 += n
+
+    return result1 + result2
+
+def possible_bug():
+    # Compare strings with 'is' instead of '=='
+    a = "hello"
+    b = "hello"
+    if a is b:
+        print("Bug: comparing strings with 'is'")
+    # Access possibly undefined variable
+    if False:
+        x = 42
+    print(x)  # Will trigger "undefined variable" warning
+
+def small_function():
+    return 1
+
+def small_function():
+    # Function with the same name, hides previous (duplicate function definition)
+    return 2
+
+# Long line issue (too many characters in a single line)
+long_line = "This is a very long line that is intended to demonstrate a code smell for SonarQube, exceeding typical line length recommendations."
 
 if __name__ == "__main__":
-    hardcoded_password()
-    command_injection()
-    unsafe_eval()
-    print(weak_hash("password"))
-    insecure_sql()
+    find_sum([1, 2, 3])
+    bad_naming()
+    duplicate_code()
+    possible_bug()
+    print(small_function())
+    print(long_line)
