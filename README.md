@@ -14,16 +14,16 @@ This repository contains IaC with Terraform, Python application code, and a GitH
 ## Folder Structure
 
 .
-├── .github/workflows/        # CI workflows (SonarQube, Bandit, etc.)
-├── src/                      # Python source code
-│   └── main.py
-├── terraform/                # Terraform code for cloud infrastructure
-│   ├── main.tf
-│   └── aws/                  # (ignored by git, no secrets committed)
-├── bandit_result.json        # (Generated, gitignored) Bandit security scan (JSON)
-├── bandit.txt                # (Generated, gitignored) Bandit scan (text)
-├── README.md                 # Project documentation
-└── sonar-project.properties  # SonarQube configuration
+├── .github/workflows/ # CI workflows (SonarQube, Bandit, etc.)
+├── src/ # Python source code
+│ └── main.py
+├── terraform/ # Terraform code for cloud infrastructure
+│ ├── main.tf
+│ └── aws/ # (ignored by git, no secrets committed)
+├── bandit_result.json # (Generated, gitignored) Bandit security scan (JSON)
+├── bandit.txt # (Generated, gitignored) Bandit scan (text)
+├── README.md # Project documentation
+└── sonar-project.properties # SonarQube configuration
 
 
 ---
