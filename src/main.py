@@ -1,30 +1,60 @@
-def main():
-    # Good variable naming and all variables are used
-    numbers = [1, 2, 3, 4, 5]
-    result = sum(numbers)
-    print(f"Sum is: {result}")
+# Example Python code with typical code issues for SonarQube
 
-    # Safe logic: no dangerous eval, proper try/except
-    try:
-        computation = 10 / 2
-        print(f"Computation: {computation}")
-    except ZeroDivisionError as e:
-        print(f"Error: {e}")
+import sys
 
-    user_input = "hello"
-    if user_input == "hello":
-        print("User input matches!")
+def find_sum(numbers):
+    # Unused variable
+    total = 0
 
-    # Demonstrate clean code with no unreachable code or duplicate definitions
-    if len(numbers) > 0:
-        print("The list is not empty.")
+    # Magic number (should be a constant)
+    threshold = 10
 
-    x = "string1"
-    y = "string2"
-    if x == y:
-        print("Strings are equal.")
-    else:
-        print("Strings are not equal.")
+    # Unreachable code
+    return sum(numbers)
+    print("This code is unreachable")
+
+def bad_naming():
+    # Variable name not following PEP8 (should be snake_case)
+    BadVariableName = 42
+    return BadVariableName
+
+def duplicate_code():
+    # Duplicate logic
+    result1 = 0
+    for n in range(5):
+        result1 += n
+
+    result2 = 0
+    for n in range(5):
+        result2 += n
+
+    return result1 + result2
+
+def possible_bug():
+    # Compare strings with 'is' instead of '=='
+    a = "hello"
+    b = "hello"
+    if a is b:
+        print("Bug: comparing strings with 'is'")
+    # Access possibly undefined variable
+    if False:
+        x = 42
+    print(x)  # Will trigger "undefined variable" warning
+
+def small_function():
+    return 1
+
+def small_function():
+    # Function with the same name, hides previous (duplicate function definition)
+    return 2
+
+# Long line issue (too many characters in a single line)
+long_line = "This is a very long line that is intended to demonstrate a code smell for SonarQube, exceeding typical line length recommendations."
 
 if __name__ == "__main__":
-    main()
+    find_sum([1, 2, 3])
+    bad_naming()
+    duplicate_code()
+    possible_bug()
+    print(small_function())
+    print(long_line)
